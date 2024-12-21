@@ -20,7 +20,7 @@ Discord rich presence integration for the pinecil V2 soldering iron. Shows live 
 
 ## Usage
 1. Clone this repo
-2. `cargo install -- path .`
+2. `cargo install --path .`
 3. Run `pinecord`
 4. Discord will automatically update your status
 5. You can leave it running in the background. When you unplug the pinecil the status disappears
