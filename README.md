@@ -1,6 +1,8 @@
-# Pinecord
+# pinecord
 
-Discord Rich Presence integration for the Pinecil V2 soldering iron. Shows live temperature, voltage, andpower usage in your discord status, because why the hell not
+Discord rich presence integration for the pinecil V2 soldering iron. Shows live temperature, voltage, and power usage in your discord status, because why the hell not
+
+![image](https://github.com/user-attachments/assets/b558414f-c412-4365-a586-974382de6003)
 
 ## Use cases
 
