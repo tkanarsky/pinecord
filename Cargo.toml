@@ -1,13 +1,15 @@
 [package]
-name = "ironpresence"
-version = "0.1.0"
+name = "pinecord"
+version = "0.2.0"
+description = "Discord rich presence for Pinecil V2 via BLE"
+repository = "https://github.com/tkanarsky/pinecord"
 edition = "2021"
+authors = ["tkanarsky <tkanarsky@outlook.com>"]
+license = "MIT"
 
 [dependencies]
 btleplug = "0.11.6"
-clearscreen = "3.0.0"
 ctrlc = "3.4.5"
 discord-rich-presence = "0.2.5"
-serde = { version = "1.0.216", features = ["derive"] }
-tokio = { version = "1.42.0", features = ["macros", "rt-multi-thread", "time"] }
+tokio = { version = "1.42.0", features = ["rt-multi-thread", "time", "macros"] }
 uuid = "1.11.0"

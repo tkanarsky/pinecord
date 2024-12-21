@@ -4,12 +4,12 @@ use std::{error::Error, time::Duration};
 use btleplug::api::{Central, Manager as _, Peripheral as _, ScanFilter, Characteristic};
 use btleplug::platform::{Manager, Peripheral, Adapter};
 use discord_rich_presence::{DiscordIpcClient, activity, DiscordIpc};
-use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
 const IRON_SERVICE_UUID: Uuid = Uuid::from_u128(0x9eae1000_9d0d_48c5_aa55_33e27f9bc533);
 
 // uuids for reading state (live service)
+// sourced from https://github.com/Ralim/IronOS/blob/dev/source/Core/BSP/Pinecilv2/ble_characteristics.h
 const UUID_LIVE_TEMP: Uuid = Uuid::from_u128(0xd85ef001_168e_4a71_aa55_33e27f9bc533);
 const UUID_SETPOINT: Uuid = Uuid::from_u128(0xd85ef002_168e_4a71_aa55_33e27f9bc533);
 const UUID_DC_IN: Uuid = Uuid::from_u128(0xd85ef003_168e_4a71_aa55_33e27f9bc533);
@@ -25,8 +25,8 @@ const UUID_HALL: Uuid = Uuid::from_u128(0xd85ef00c_168e_4a71_aa55_33e27f9bc533);
 const UUID_OP_MODE: Uuid = Uuid::from_u128(0xd85ef00d_168e_4a71_aa55_33e27f9bc533);
 const UUID_WATTS: Uuid = Uuid::from_u128(0xd85ef00e_168e_4a71_aa55_33e27f9bc533);
 
-
-#[derive(Default, Debug, Serialize, Deserialize)]
+// FIXME - a lot of these are unused
+#[derive(Default, Debug)]
 pub struct IronStreamingState {
     pub live_temp: u32,
     pub setpoint_temp: u32,
@@ -88,20 +88,17 @@ async fn find_iron(adapter: &Adapter) -> Result<Peripheral, Box<dyn Error>> {
 }
 
 async fn connect_to_iron(adapter: &Adapter, signal: &ShutdownSignal) -> Result<Peripheral, Box<dyn Error>> {
-    println!("scanning for iron...");
     adapter.start_scan(ScanFilter {services: vec![IRON_SERVICE_UUID]}).await?;
     let iron: Peripheral = find_iron(&adapter).await?;
-    println!("found iron! connecting...");
     adapter.stop_scan().await?;
-    // the connect() method may time out if there is a warm scan result + iron is offline
-    // so we repeat until we connect
+    // the connect() method may time out in bluez if there is a warm scan result + iron is offline
+    // so we repeat a smaller timeout until we connect
     while !signal.load(Ordering::Relaxed) {
         if let Ok(connect_res) = tokio::time::timeout (
             Duration::from_secs(5),
             iron.connect(),
         ).await {
             if let Ok(_) = connect_res {
-                println!("connected!");
                 break;
             }
         }
@@ -113,8 +110,9 @@ async fn connect_to_iron(adapter: &Adapter, signal: &ShutdownSignal) -> Result<P
 }
 
 async fn run(signal: ShutdownSignal) -> Result<(), Box<dyn Error>> {
+    let mut discord_rpc = DiscordIpcClient::new("1320065680883712070")?; 
     while !signal.load(Ordering::Relaxed) {
-        let mut discord_rpc = DiscordIpcClient::new("1320065680883712070")?;
+        // Corresponds to a "Pinecil V2" application in my Discord dev account, feel free to swap
         discord_rpc.connect()?;
         // Reset bluetooth stack between tries
         let manager = Manager::new().await?;
@@ -126,10 +124,7 @@ async fn run(signal: ShutdownSignal) -> Result<(), Box<dyn Error>> {
                 Ok(state) => {
                     // let State = format!("°C (~{} W)", state.live_temp, state.estimated_watts);
                     dbg!(&state);
-                    let seconds_idle = Duration::from_millis(100 * 
-                        (state.uptime.saturating_sub(state.last_movement)) as u64)
-                        .as_secs();
-                    
+        
                     let temp_diff: i64 = state.setpoint_temp as i64 - state.live_temp as i64;
 
                     let bottom_line = format!("{} V DC · {} W", 
@@ -151,6 +146,7 @@ async fn run(signal: ShutdownSignal) -> Result<(), Box<dyn Error>> {
                     } else if state.operating_mode == 2 {
                         top_line = format!("{}°C (TURBO BOOST ENGAGED)", state.live_temp);
                     } else if state.operating_mode == 3 {
+                        // FIXME: idle setpoint not actually exposed
                         if state.live_temp < 50 {
                             top_line = format!("{}°C (idle, resumes to {}°C)", state.live_temp, state.setpoint_temp);
                         } else {
@@ -167,7 +163,7 @@ async fn run(signal: ShutdownSignal) -> Result<(), Box<dyn Error>> {
                     }
                 },
                 Err(e) => {
-                    println!("lost connection: {}", e);
+                    println!("Lost connection: {}", e);
                     success = false;
                     break;
                 }
@@ -175,7 +171,7 @@ async fn run(signal: ShutdownSignal) -> Result<(), Box<dyn Error>> {
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
         if success {
-            println!("trying to disconnect");
+            println!("Clean shutdown, disconnecting");
             iron.disconnect().await?;
             discord_rpc.close()?;
         }
