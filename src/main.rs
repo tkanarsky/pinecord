@@ -121,12 +121,8 @@ async fn run(signal: ShutdownSignal) -> Result<(), Box<dyn Error>> {
         let mut success = true;
         while !signal.load(Ordering::Relaxed) {
             match read_iron_state(&iron).await {
-                Ok(state) => {
-                    // let State = format!("°C (~{} W)", state.live_temp, state.estimated_watts);
-                    dbg!(&state);
-        
+                Ok(state) => {        
                     let temp_diff: i64 = state.setpoint_temp as i64 - state.live_temp as i64;
-
                     let bottom_line = format!("{} V DC · {} W", 
                         state.dc_input_voltage / 10,
                         state.power_level / 10);
@@ -153,14 +149,11 @@ async fn run(signal: ShutdownSignal) -> Result<(), Box<dyn Error>> {
                             top_line = format!("{}°C (cooling to idle temp)", state.live_temp)
                         }
                     }
-
                     discord_rpc.set_activity(
                         activity::Activity::new()
                             .state(&bottom_line)
                             .details(&top_line)
-                    )?; {
-
-                    }
+                    )?;
                 },
                 Err(e) => {
                     println!("Lost connection: {}", e);
