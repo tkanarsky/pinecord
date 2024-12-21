@@ -1,0 +1,13 @@
+[package]
+name = "ironpresence"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+btleplug = "0.11.6"
+clearscreen = "3.0.0"
+ctrlc = "3.4.5"
+discord-rich-presence = "0.2.5"
+serde = { version = "1.0.216", features = ["derive"] }
+tokio = { version = "1.42.0", features = ["macros", "rt-multi-thread", "time"] }
+uuid = "1.11.0"
